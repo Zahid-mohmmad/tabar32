@@ -1,8 +1,12 @@
 import 'package:e_commerce_app/constants/global_variables.dart';
 import 'package:e_commerce_app/features/account/screens/account_screen.dart';
+import 'package:e_commerce_app/features/cart/screens/cart_screen.dart';
 import 'package:e_commerce_app/features/home/screens/home_screen.dart';
+import 'package:e_commerce_app/models/user.dart';
+import 'package:e_commerce_app/providers/user_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:badges/badges.dart' as badge;
+import 'package:provider/provider.dart';
 
 class BottomBar extends StatefulWidget {
   static const String routeName = '/actual-home';
@@ -20,12 +24,7 @@ class _BottomBarState extends State<BottomBar> {
   List<Widget> pages = [
     const HomeScreen(),
     const AccountScreen(),
-    const Center(
-      child: Text(
-        "Cart Page",
-        style: TextStyle(color: Colors.black),
-      ),
-    ),
+    const CartScreen(),
   ];
 
   void updatePage(int page) {
@@ -36,6 +35,7 @@ class _BottomBarState extends State<BottomBar> {
 
   @override
   Widget build(BuildContext context) {
+    final userCarLen = context.watch<UserProvider>().user.cart.length;
     return Scaffold(
       body: pages[_page],
       bottomNavigationBar: BottomNavigationBar(
@@ -87,9 +87,10 @@ class _BottomBarState extends State<BottomBar> {
                           : GlobalVariables.unselectedNavBarColor),
                 ),
               ),
-              child: const badge.Badge(
-                badgeContent: Text('2', style: TextStyle(color: Colors.white)),
-                child: Icon(Icons.shopping_cart_checkout_outlined),
+              child: badge.Badge(
+                badgeContent: Text(userCarLen.toString(),
+                    style: const TextStyle(color: Colors.white)),
+                child: const Icon(Icons.shopping_cart_checkout_outlined),
               ),
             ),
             label: '',

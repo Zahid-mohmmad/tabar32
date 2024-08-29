@@ -44,8 +44,24 @@ class _AuthScreenState extends State<AuthScreen> {
         name: _nameController.text);
   }
 
+  void signUpUserf() {
+    authService.signUpUserF(
+        context: context,
+        email: _emailController.text,
+        password: _passController.text,
+        name: _nameController.text);
+  }
+
   void signInUser() {
     authService.signInUser(
+      context: context,
+      email: _emailController.text,
+      password: _passController.text,
+    );
+  }
+
+  void signInUserf() {
+    authService.signInUserf(
       context: context,
       email: _emailController.text,
       password: _passController.text,
@@ -121,6 +137,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             onTap: () {
                               if (_signUpFormKey.currentState!.validate()) {
                                 signUpUser();
+                                // signUpUserf();
                               }
                             })
                       ],
@@ -173,6 +190,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             onTap: () {
                               if (_signInFormKey.currentState!.validate()) {
                                 signInUser();
+                                // signInUserf();
                               }
                             })
                       ],

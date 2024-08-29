@@ -1,20 +1,73 @@
+import 'dart:convert';
+import 'package:carousel_slider/carousel_options.dart';
+import 'package:carousel_slider/carousel_slider.dart';
+import 'package:e_commerce_app/common/widgets/custom_button.dart';
+import 'package:e_commerce_app/common/widgets/stars.dart';
 import 'package:e_commerce_app/constants/global_variables.dart';
+import 'package:e_commerce_app/features/product_details/screens/product_colors.dart';
+import 'package:e_commerce_app/features/product_details/screens/product_size.dart';
+import 'package:e_commerce_app/features/product_details/services/product_detail_services.dart';
 import 'package:e_commerce_app/features/search/screens/search_screen.dart';
+
+import 'package:e_commerce_app/features/stripe/constatnts/constants.dart';
 import 'package:e_commerce_app/models/product.dart';
+import 'package:e_commerce_app/providers/user_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
+import 'package:pay/pay.dart';
+import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
 
 class ProductDetailsScreen extends StatefulWidget {
   static const String routeName = '/product-details';
   final Product product;
-  const ProductDetailsScreen({super.key, required this.product});
+
+  const ProductDetailsScreen({
+    super.key,
+    required this.product,
+  });
 
   @override
   State<ProductDetailsScreen> createState() => _ProductDetailsScreenState();
 }
 
 class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
+  final ProductDetailService productDetailsServices = ProductDetailService();
+  double avgRating = 0;
+  double myRating = 0;
+
+  List<PaymentItem> paymentItems = [];
+  Map<String, dynamic>? paymentIntent;
+
+  @override
+  void initState() {
+    super.initState();
+    double totalRating = 0;
+    for (int i = 0; i < widget.product.rating!.length; i++) {
+      totalRating += widget.product.rating![i].rating;
+      if (widget.product.rating![i].userId ==
+          Provider.of<UserProvider>(context, listen: false).user.id) {
+        myRating = widget.product.rating![i].rating;
+      }
+    }
+    if (totalRating != 0) {
+      avgRating = totalRating / widget.product.rating!.length;
+    }
+  }
+
   void navigateToSearchScreen(String query) {
     Navigator.pushNamed(context, SearchScreen.routeName, arguments: query);
+  }
+
+  final List<String> availableColors = ["Red", "Blue", "Green"];
+  final List<String> availableSizes = ["S", "M", "L", "XL"];
+
+  void addToCart() {
+    productDetailsServices.addtocart(
+      context: context,
+      product: widget.product,
+    );
   }
 
   @override
@@ -39,7 +92,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                     borderRadius: BorderRadius.circular(7),
                     elevation: 1,
                     child: TextFormField(
-                      style: TextStyle(color: Colors.black),
+                      style: const TextStyle(color: Colors.black),
                       onFieldSubmitted: navigateToSearchScreen,
                       decoration: InputDecoration(
                         filled: true,
@@ -93,6 +146,255 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           ),
         ),
       ),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    widget.product.id!,
+                    style: const TextStyle(color: Colors.black),
+                  ),
+                  Stars(rating: avgRating),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
+              child: Text(
+                widget.product.name,
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontSize: 15,
+                ),
+              ),
+            ),
+            CarouselSlider(
+              items: widget.product.images.map(
+                (i) {
+                  return Builder(
+                    builder: (BuildContext context) => Image.network(
+                      i,
+                      fit: BoxFit.contain,
+                      height: 200,
+                    ),
+                  );
+                },
+              ).toList(),
+              options: CarouselOptions(
+                viewportFraction: 1,
+                height: 300,
+              ),
+            ),
+            Container(
+              color: Colors.black12,
+              height: 5,
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: RichText(
+                text: TextSpan(
+                    text: 'Deal Price: ',
+                    style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold),
+                    children: [
+                      TextSpan(
+                        text: 'BHD ${widget.product.price}',
+                        style: const TextStyle(
+                            fontSize: 22,
+                            color: Colors.red,
+                            fontWeight: FontWeight.w500),
+                      ),
+                    ]),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(
+                widget.product.description,
+                style: const TextStyle(color: Colors.black),
+              ),
+            ),
+            Container(
+              color: Colors.black12,
+              height: 2,
+            ),
+            Center(
+              child: ColorSelectionWidget(
+                colors: availableColors,
+                onColorSelected: (color) {
+                  print("Selected Color: $color");
+                },
+              ),
+            ),
+
+            Container(
+              color: Colors.black12,
+              height: 2,
+            ),
+            Center(
+              child: SizeSelectionWidget(
+                sizes: availableSizes,
+                onSizeSelected: (size) {
+                  print("Selected Size: $size");
+                },
+              ),
+            ),
+
+/////////////////////////////////////////////////////////////////////////
+            Container(
+              color: Colors.black12,
+              height: 5,
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+              child: CustomButton(
+                text: 'Buy Now',
+                onTap: () {
+                  makePayment(widget.product.price.toString());
+                },
+                color: Colors.orange,
+              ),
+            ),
+            const SizedBox(
+              height: 10,
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+              child: CustomButton(
+                text: 'Add to Cart',
+                onTap: addToCart,
+                color: const Color.fromRGBO(254, 216, 19, 1),
+              ),
+            ),
+            const SizedBox(
+              height: 10,
+            ),
+            Container(
+              color: Colors.black12,
+              height: 5,
+            ),
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 10),
+                child: Text(
+                  'Rate The product',
+                  style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+            Center(
+              child: RatingBar.builder(
+                initialRating: myRating,
+                minRating: 1,
+                direction: Axis.horizontal,
+                allowHalfRating: true,
+                itemCount: 5,
+                itemPadding: const EdgeInsets.symmetric(horizontal: 4),
+                itemBuilder: (context, _) => const Icon(
+                  Icons.star,
+                  color: GlobalVariables.secondaryColor,
+                ),
+                onRatingUpdate: (rating) {
+                  productDetailsServices.rateProduct(
+                      context: context,
+                      product: widget.product,
+                      rating: rating);
+                },
+                unratedColor: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
+  }
+
+  Future<void> makePayment(String amount) async {
+    try {
+      paymentIntent = await createPaymentIntent(amount, 'USD');
+      await Stripe.instance
+          .initPaymentSheet(
+              paymentSheetParameters: SetupPaymentSheetParameters(
+            paymentIntentClientSecret: paymentIntent?['client_secret'],
+            style: ThemeMode.dark,
+            merchantDisplayName: 'Zahid',
+          ))
+          .then((value) {});
+
+      displayPaymentSheet();
+    } catch (e, s) {
+      print('exception : $e$s ');
+    }
+  }
+
+  displayPaymentSheet() async {
+    try {
+      await Stripe.instance.presentPaymentSheet().then((value) async {
+        showDialog(
+            context: context,
+            builder: (_) => const AlertDialog(
+                    content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.check_circle, color: Colors.green),
+                        Text("Payment Successful"),
+                      ],
+                    ),
+                  ],
+                )));
+        paymentIntent = null;
+      }).onError((error, StackTrace) {
+        //  print("ERROR IS ----->  $error $StackTrace");
+      });
+    } on StripeException catch (e) {
+      // print("Error is: ----> $e");
+      showDialog(
+          context: context,
+          builder: (_) => const AlertDialog(
+                content: Text("Canceled"),
+              ));
+    } catch (e) {
+      //  print('$e');
+    }
+  }
+
+  createPaymentIntent(String amount, String currency) async {
+    try {
+      Map<String, dynamic> body = {
+        'amount': calculateAmount(amount),
+        'currency': currency,
+        'payment_method_types[]': 'card'
+      };
+      var response = await http.post(
+        Uri.parse('https://api.stripe.com/v1/payment_intents'),
+        headers: {
+          'Authorization': 'Bearer $secretKey',
+          'content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: body,
+      );
+
+      return jsonDecode(response.body);
+    } catch (e) {
+      print('err charging user${e.toString()}');
+    }
+  }
+
+  calculateAmount(String amount) {
+    // Ensure amount is parsed correctly as an integer
+    final calculatedAmount = (double.parse(amount) * 100).round();
+    return calculatedAmount.toString();
   }
 }

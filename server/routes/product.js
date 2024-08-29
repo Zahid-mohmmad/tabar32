@@ -1,7 +1,7 @@
 const express = require("express");
 const productRouter = express.Router();
 
-const Product = require("../models/product");
+const {Product} = require("../models/product");
 
 //get the middleware of auth 
 const auth = require('../middlewares/auth');
@@ -55,6 +55,39 @@ productRouter.get('/api/products', auth, async (req, res) => {
     {
       res.status(500).json({error: e.message})
 
+    }
+
+  });
+
+
+  //creating a post request route to rate the products
+  productRouter.post('/api/rate-product', auth, async (req, res) => {
+    try{
+      const {id, rating} = req.body;
+      let product = await Product.findById(id);
+
+      for(let i = 0; i < product.ratings.length; i++)
+      {
+        if(product.ratings[i].userId == req.userId)
+        {
+          product.ratings.splice(i, 1);
+          break;
+        }
+      }
+
+      const ratingSchema = {
+        userId: req.user,
+        rating,
+      };
+
+      product.ratings.push(ratingSchema);
+      product = await product.save();
+      res.json(product);
+
+    }
+    catch(e)
+    {
+      res.status(500).json({error: e.message});
     }
 
   });

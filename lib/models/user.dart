@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-class User {
+class AppUser {
   final String id;
   final String name;
   final String email;
@@ -8,8 +8,9 @@ class User {
   final String address;
   final String type;
   final String token;
+  final List<dynamic> cart;
 
-  User({
+  AppUser({
     required this.id,
     required this.name,
     required this.email,
@@ -17,6 +18,7 @@ class User {
     required this.address,
     required this.type,
     required this.token,
+    required this.cart,
   });
 
   Map<String, dynamic> toMap() {
@@ -28,11 +30,12 @@ class User {
       'address': address,
       'type': type,
       'token': token,
+      'cart': cart,
     };
   }
 
-  factory User.fromMap(Map<String, dynamic> map) {
-    return User(
+  factory AppUser.fromMap(Map<String, dynamic> map) {
+    return AppUser(
       id: map['_id'] ?? '',
       name: map['name'] ?? '',
       email: map['email'] ?? '',
@@ -40,14 +43,19 @@ class User {
       address: map['address'] ?? '',
       type: map['type'] ?? '',
       token: map['token'] ?? '',
+      cart: List<Map<String, dynamic>>.from(
+        map['cart']?.map(
+          (x) => Map<String, dynamic>.from(x),
+        ),
+      ),
     );
   }
 
   String toJson() => json.encode(toMap());
 
-  factory User.fromJson(String source) => User.fromMap(json.decode(source));
-
-  User copyWith({
+  factory AppUser.fromJson(String source) =>
+      AppUser.fromMap(json.decode(source));
+  AppUser copyWith({
     String? id,
     String? name,
     String? email,
@@ -55,8 +63,9 @@ class User {
     String? address,
     String? type,
     String? token,
+    List<dynamic>? cart,
   }) {
-    return User(
+    return AppUser(
       id: id ?? this.id,
       name: name ?? this.name,
       email: email ?? this.email,
@@ -64,6 +73,7 @@ class User {
       address: address ?? this.address,
       type: type ?? this.type,
       token: token ?? this.token,
+      cart: cart ?? this.cart,
     );
   }
 }

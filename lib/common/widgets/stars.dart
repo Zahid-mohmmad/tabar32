@@ -17,6 +17,7 @@ class Stars extends StatelessWidget {
         Icons.star,
         color: GlobalVariables.secondaryColor,
       ),
+      unratedColor: Colors.grey,
     );
   }
 }

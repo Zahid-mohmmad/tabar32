@@ -7,7 +7,8 @@ class QuoteBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final user = Provider.of<UserProvider>(context).user;
+    final userProvider = Provider.of<UserProvider>(context);
+    final user = userProvider.user;
     return Container(
       height: 40,
       decoration: const BoxDecoration(
